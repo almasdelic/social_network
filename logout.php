@@ -1,0 +1,8 @@
+<?php
+
+include 'functions/init.php';
+session_destroy();
+
+redirect(location: 'index.php');
+
+?>
