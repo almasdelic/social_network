@@ -1,5 +1,6 @@
 <?php
 include 'inc/header.php';
+login_check_pages();
 ?>
 
 <div>
