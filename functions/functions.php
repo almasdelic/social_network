@@ -221,15 +221,17 @@ function get_user($id = NULL) {
 function user_profile_image_upload() {
 
     if ($_SERVER['REQUEST_METHOD'] == "POST") {
+
         $target_dir = "uploads/";
-        $user = get_user();
+        $user = get_user(); //uzimamo ID usera
         $user_id = $user['id'];
-        $target_file = $target_dir . $user_id . "." .pathinfo(basename($_FILES["profile_image_file"]["name"]), PATHINFO_EXTENSION);;
-        $uploadOk = 1;
+        $target_file = $target_dir . $user_id . "." .pathinfo(basename($_FILES["profile_photo_file"]["name"]), PATHINFO_EXTENSION);;
+        $uploadOk = 1; //za greške, moze biti i true
         $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
         $error = "";
-
-        $check = getimagesize($_FILES["profile_image_file"]["tmp_name"]);
+        
+        //niz provjera za sliku
+        $check = getimagesize($_FILES["profile_photo_file"]["tmp_name"]);
         if ($check !== false) {
             $uploadOk = 1;
         } else {
@@ -237,7 +239,7 @@ function user_profile_image_upload() {
             $uploadOk = 0;
         }
 
-        if ($_FILES["profile_image_file"]["size"] > 5000000) {
+        if ($_FILES["profile_photo_file"]["size"] > 5000000) { //vece od 5 mb
             $error = "Sorry, your file is too large.";
             $uploadOk = 0;
         }
@@ -250,6 +252,7 @@ function user_profile_image_upload() {
         if ($uploadOk == 0) {
             set_message('Error uploading file: '. $error);
         } else {
+
             $sql = "UPDATE users SET profile_photo='$target_file' WHERE id=$user_id";
             confirm(query($sql));
             set_message('Profile Image uploaded!');
@@ -259,9 +262,78 @@ function user_profile_image_upload() {
             }
         }
 
-        redirect('profile.php');
+        redirect(location: 'profile.php');
     }
 }
+
+
+function user_restrictions() {
+    if(!isset($_SESSION['email'])) {
+
+        redirect(location: 'login.php');
+    }
+}
+
+
+function login_check_pages() {
+    if(isset($_SESSION['email'])) {
+
+        redirect(location: 'index.php');
+    }
+}
+
+
+function create_post() {
+    $errors = [];
+    if($_SERVER['REQUEST_METHOD'] == 'POST') {
+        
+        $post_content = clean($_POST['post_content']);
+
+        if (strlen($post_content) > 200) {
+            $errors[] = "Your post is too long!";
+        }
+
+        if(!empty($errors)) {
+            foreach($errors as $error) {
+                echo '<div class="alert">' . $error . '</div>';
+            }
+        } else {
+
+            //upisujume u bazu
+            $post_content = filter_var($post_content, FILTER_SANITIZE_STRING);
+            $post_content = escape($post_content);
+
+            $user = get_user();
+            $user_id = $user['id'];
+
+            $sql = "INSERT INTO posts (user_id, content, likes) VALUES ('$user_id', '$post_content', 0)";
+
+            confirm(query($sql));
+            set_message('You added a post!');
+            redirect(location: 'index.php'); 
+        }
+    }
+}
+
+
+function fetch_all_posts()
+{
+    $query = "SELECT * FROM posts ORDER BY created_time DESC";
+    $result = query($query);
+
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $user = get_user($row['user_id']);
+
+            echo "<div class='post'><p><img src='" . $user['profile_photo'] . "' alt=''><i><b>" . $user['first_name'] . " " . $user['last_name'] . "</b></i></p>
+                    <p>" . $row['content'] . "</p>
+                    <p><i>Date: <b>" . $row['created_time'] . "</b></i></p>
+                    
+                    <div class='likes'>Likes: <b id='likes_".$row['id']."'>" . $row['likes'] . "</b><button onclick='like_post(this)' data-post_id='".$row['id']."'>LIKE</button></div></div>";
+        }
+    }
+}
+
 
 
 
